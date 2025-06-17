@@ -27,7 +27,7 @@ from . import screens
 
 logger = logging.getLogger('QuickCSF.app')
 
-app = QtWidgets.QApplication()
+app = QtWidgets.QApplication(sys.argv)
 app.setApplicationName('QuickCSF')
 mainWindow = None
 settings = None

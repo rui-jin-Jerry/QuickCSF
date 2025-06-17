@@ -17,22 +17,12 @@ class GaborPatchImage(QtGui.QImage):
 		color1=QtGui.QColor(255, 255, 255),
 		color2=QtGui.QColor(0, 0, 0)
 	):
-		'''Create a gabor patch QImage
+		'''Create a gabor patch QImage'''
+		self.size = int(size)  # Ensure it's an integer
+		super().__init__(self.size, self.size, QtGui.QImage.Format_ARGB32)
 
-			Args:
-				size: the width and height in pixels
-				orienation: grating orientation in degrees
-				gaussianStd: gaussian smoothing standard deviation in pixels
-				frequency: spatial frequency in cycles per pixel
-				phase: phase shift
-				color1: the first color
-				color2: the second color
-		'''
-		super().__init__(size, size, QtGui.QImage.Format_ARGB32)
-		
-		self.size = size
 		self.orientation = orientation
-		self.gaussianStd = gaussianStd if not gaussianStd is None else size/8
+		self.gaussianStd = gaussianStd if gaussianStd is not None else self.size / 8
 		self.frequency = frequency
 		self.phase = phase
 		self.color1 = color1
@@ -42,43 +32,35 @@ class GaborPatchImage(QtGui.QImage):
 
 	def setPixels(self):
 		# convert orientation degrees to radians
-		self.orientation = (self.orientation+90) * math.tau / 360
+		orientation_rad = (self.orientation + 90) * math.tau / 360
 
-		# Convert the size to a factor of the standard deviation
-		self.size = self.size / self.gaussianStd
+		# normalize size to a Gaussian scale
+		scaled_size = self.size / self.gaussianStd
 
-		self.color1 = self.color1.getRgb()
-		self.color2 = self.color2.getRgb()
+		color1 = self.color1.getRgb()
+		color2 = self.color2.getRgb()
 
-		for rx in range(0, int(self.size * self.gaussianStd)):
-			for ry in range(0, int(self.size * self.gaussianStd)):
-				# The x,y from the center
-				dx = rx - 0.5 * self.gaussianStd * self.size
-				dy = ry - 0.5 * self.gaussianStd * self.size
+		for rx in range(self.size):
+			for ry in range(self.size):
+				dx = rx - 0.5 * self.size
+				dy = ry - 0.5 * self.size
 
-				# The angle of the pixel
-				t = math.atan2(dy, dx) + self.orientation
-
-				# The distance of the pixel from the center
+				t = math.atan2(dy, dx) + orientation_rad
 				r = math.sqrt(dx * dx + dy * dy)
-				
-				# The coordinates in the unrotated image
+
 				x = r * math.cos(t)
 				y = r * math.sin(t)
 
-				# The amplitude without envelope (from 0 to 1)
 				amp = 0.5 + 0.5 * math.cos(self.phase + math.tau * (x * self.frequency))
+				f = math.exp(-0.5 * (x / self.gaussianStd) ** 2 - 0.5 * (y / self.gaussianStd) ** 2)
 
-				# The amplitude of the pixel (from 0 to 1)
-				f = math.e**(-0.5 * pow(x / self.gaussianStd, 2) - 0.5 * pow(y / self.gaussianStd, 2))
+				r_val = color1[0] * amp + color2[0] * (1 - amp)
+				g_val = color1[1] * amp + color2[1] * (1 - amp)
+				b_val = color1[2] * amp + color2[2] * (1 - amp)
+				a_val = f * (color1[3] * amp + color2[3] * (1 - amp))
 
-				# color components
-				r = self.color1[0] * amp + self.color2[0]*(1-amp)
-				g = self.color1[1] * amp + self.color2[1]*(1-amp)
-				b = self.color1[2] * amp + self.color2[2]*(1-amp)
-				a = f * (self.color1[3] * amp + self.color2[3] * (1-amp))
+				self.setPixel(rx, ry, QtGui.qRgba(int(r_val), int(g_val), int(b_val), int(a_val)))
 
-				self.setPixel(rx, ry, QtGui.qRgba(r, g, b, a))
 
 	def __str__(self):
 		return self.__repr__()
@@ -97,11 +79,16 @@ class ContrastGaborPatchImage(GaborPatchImage):
 
 		self.contrast = contrast
 
-		luminance = 255 * (0.5 + 0.5 * contrast)
-		color1 = QtGui.QColor(luminance, luminance, luminance)
+		# Calculate luminance values in the 0–255 range
+		# max_intensity = int(round(255 * contrast))
+		#color1 = QtGui.QColor(max_intensity, 0, 0)
+		#color2 = QtGui.QColor(0, max_intensity, 0)
+		high_luminance = int(round(255 * (0.5 + 0.5 * contrast)))
+		low_luminance = int(round(255 * (0.5 - 0.5 * contrast)))
 
-		luminance = 255 * (0.5 - 0.5 * contrast)
-		color2 = QtGui.QColor(luminance, luminance, luminance)
+		# Use integer RGB values in QColor
+		color1 = QtGui.QColor(high_luminance, high_luminance, high_luminance)
+		color2 = QtGui.QColor(low_luminance, low_luminance, low_luminance)
 
 		super().__init__(color1=color1, color2=color2, *args, **kwargs)
 

@@ -77,7 +77,7 @@ class QuickCSFWindow(QtWidgets.QMainWindow):
 
 	def showBlank(self):
 		self.displayWidget.setText('')
-		self.displayWidget.setPixmap(None)
+		self.displayWidget.setPixmap(QtGui.QPixmap())
 
 	def giveFeedback(self, good):
 		if good:

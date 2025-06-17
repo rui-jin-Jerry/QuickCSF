@@ -5,6 +5,7 @@ import logging
 import argparse
 import time
 import math
+import sys
 
 import numpy
 
@@ -151,7 +152,7 @@ if __name__ == '__main__':
 	if settings['trials'] is None:
 		from qtpy import QtWidgets
 		from . import ui
-		app = QtWidgets.QApplication()
+		app = QtWidgets.QApplication(sys.argv)
 		settings = ui.getSettings(parser, settings, ['trials'])
 
 	if settings is not None:
